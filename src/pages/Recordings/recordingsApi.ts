@@ -55,6 +55,26 @@ export function recordingFileUrl(id: Recording['id']): string {
     return `${base}/${encodeURIComponent(String(id))}/file`;
 }
 
+// The OTS archive route takes up to 100 ids in one request.
+export const MAX_ARCHIVE_IDS = 100;
+
+// ZIP of chosen recordings: GET /api/taklab/recordings/archive?ids=a,b,c.
+// The browser downloads it through a plain link, so the session cookie goes
+// along and a multi-GB archive streams to disk instead of into memory.
+export function archiveUrlForIds(ids: Recording['id'][]): string {
+    const params = new URLSearchParams({ ids: ids.map(String).join(',') });
+    return `${base}/archive?${params.toString()}`;
+}
+
+// ZIP of every recording matching the list filters:
+// GET /api/taklab/recordings/archive?all=1&kind=&account=&from=&to=.
+export function archiveUrlForFilters(filters: RecordingFilters): string {
+    const params = new URLSearchParams({ all: '1' });
+    const { page: _page, ...rest } = filterParams(filters, 1);
+    for (const [key, value] of Object.entries(rest)) params.set(key, String(value));
+    return `${base}/archive?${params.toString()}`;
+}
+
 // The contract names the fields of a single recording but not the envelope of
 // the list. OTS lists are usually paginated as {results, total, current_page,
 // total_pages, per_page}; a bare array is accepted too.

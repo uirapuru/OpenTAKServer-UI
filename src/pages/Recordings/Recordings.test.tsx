@@ -39,30 +39,46 @@ beforeEach(() => {
     });
 });
 
+function asAdmin() {
+    localStorage.setItem('administrator', 'true');
+    localStorage.setItem('username', 'administrator');
+}
+
 describe('Recordings page', () => {
-    it('shows the usage bar and all actions to the administrator', async () => {
-        localStorage.setItem('administrator', 'true');
-        localStorage.setItem('username', 'administrator');
+    it('shows the usage bar and every action on every row to the administrator', async () => {
+        asAdmin();
         render(<Recordings />);
         expect(await screen.findByText('Patrol')).toBeInTheDocument();
         expect(await screen.findByTestId('usage-bar')).toHaveTextContent('90%');
         expect(screen.getAllByLabelText('Delete recording')).toHaveLength(2);
+        expect(screen.getAllByLabelText('Rename')).toHaveLength(2);
         expect(get).toHaveBeenCalledWith('/api/taklab/recordings', { params: { page: 1 } });
     });
 
-    it('lets a regular user change only own recordings and hides usage', async () => {
+    it('shows a short notice to other accounts and calls no API', async () => {
         localStorage.setItem('administrator', 'false');
         localStorage.setItem('username', 'operator');
         render(<Recordings />);
-        expect(await screen.findByText('Patrol')).toBeInTheDocument();
-        expect(screen.getAllByLabelText('Delete recording')).toHaveLength(1);
-        expect(screen.getAllByLabelText('Download')).toHaveLength(2);
-        expect(screen.queryByTestId('usage-bar')).toBeNull();
-        expect(get).not.toHaveBeenCalledWith('/api/taklab/recordings/usage');
+        expect(screen.getByTestId('admin-only')).toHaveTextContent('Recordings are available to the administrator only.');
+        expect(screen.queryByText('Patrol')).toBeNull();
+        expect(get).not.toHaveBeenCalled();
+    });
+
+    it('treats a missing role as not an administrator', () => {
+        render(<Recordings />);
+        expect(screen.getByTestId('admin-only')).toBeInTheDocument();
+        expect(get).not.toHaveBeenCalled();
+    });
+
+    it('falls back to the notice when the server refuses the list', async () => {
+        asAdmin();
+        get.mockImplementation(() => Promise.reject({ response: { status: 403, data: { error: 'Nagrania są dostępne tylko dla administratora.' } } }));
+        render(<Recordings />);
+        expect(await screen.findByTestId('admin-only')).toBeInTheDocument();
     });
 
     it('sends the filters to the API', async () => {
-        localStorage.setItem('username', 'operator');
+        asAdmin();
         render(<Recordings />);
         await screen.findByText('Patrol');
         await userEvent.type(screen.getByLabelText('Account'), 'biali{enter}');
@@ -70,20 +86,48 @@ describe('Recordings page', () => {
     });
 
     it('renames through PATCH and deletes through DELETE', async () => {
-        localStorage.setItem('username', 'operator');
+        asAdmin();
         patch.mockResolvedValue({ status: 200 });
         del.mockResolvedValue({ status: 200 });
         render(<Recordings />);
         await screen.findByText('Patrol');
-        await userEvent.click(screen.getByLabelText('Rename'));
+        await userEvent.click(screen.getAllByLabelText('Rename')[0]);
         const input = await screen.findByDisplayValue('Patrol');
         await userEvent.clear(input);
         await userEvent.type(input, 'Patrol 2{enter}');
         await waitFor(() => expect(patch).toHaveBeenCalledWith('/api/taklab/recordings/1', { name: 'Patrol 2' }));
-        await userEvent.click(screen.getByLabelText('Delete recording'));
+        await userEvent.click(screen.getAllByLabelText('Delete recording')[0]);
         const dialog = await screen.findByRole('dialog', { name: 'Delete recording' });
         await userEvent.click(within(dialog).getByRole('button', { name: 'Delete recording' }));
         await waitFor(() => expect(del).toHaveBeenCalledWith('/api/taklab/recordings/1'));
+    });
+
+    it('downloads the selected recordings as one ZIP through a plain link', async () => {
+        asAdmin();
+        render(<Recordings />);
+        await screen.findByText('Patrol');
+        const selectedLink = () => screen.getByText('Download selected (ZIP)').closest('a')!;
+        expect(selectedLink()).not.toHaveAttribute('href');
+        const boxes = screen.getAllByRole('checkbox');
+        // First checkbox selects the whole page, then one per row.
+        await userEvent.click(boxes[1]);
+        expect(selectedLink()).toHaveAttribute('href', '/api/taklab/recordings/archive?ids=1');
+        await userEvent.click(boxes[2]);
+        expect(selectedLink()).toHaveAttribute('href', '/api/taklab/recordings/archive?ids=1%2C2');
+        expect(selectedLink()).toHaveAttribute('download');
+        expect(screen.getByTestId('selected-count')).toHaveTextContent('2');
+        await userEvent.click(screen.getByRole('button', { name: 'Clear selection' }));
+        expect(selectedLink()).not.toHaveAttribute('href');
+    });
+
+    it('downloads everything matching the applied filters', async () => {
+        asAdmin();
+        render(<Recordings />);
+        await screen.findByText('Patrol');
+        const allLink = () => screen.getByText('Download all matching the filters (ZIP)').closest('a')!;
+        expect(allLink()).toHaveAttribute('href', '/api/taklab/recordings/archive?all=1');
+        await userEvent.type(screen.getByLabelText('Account'), 'biali{enter}');
+        await waitFor(() => expect(allLink()).toHaveAttribute('href', '/api/taklab/recordings/archive?all=1&account=biali'));
     });
 });
 

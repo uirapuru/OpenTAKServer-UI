@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { canModify, cloudtakUrl, displayName, formatDurationSeconds, trackLatLngs, usagePercent } from './recordingsUtils';
-import { filterParams, parseRecordingPage, parseUsage, recordingFileUrl } from './recordingsApi';
+import { cloudtakUrl, isAdministrator, displayName, formatDurationSeconds, trackLatLngs, usagePercent } from './recordingsUtils';
+import { archiveUrlForFilters, archiveUrlForIds, filterParams, parseRecordingPage, parseUsage, recordingFileUrl } from './recordingsApi';
 
 describe('cloudtakUrl', () => {
     it('maps the OTS panel host to the CloudTAK host of the same environment', () => {
@@ -16,15 +16,23 @@ describe('cloudtakUrl', () => {
     });
 });
 
-describe('canModify', () => {
-    it('lets the author and the administrator change a recording', () => {
-        expect(canModify({ account: 'operator' }, 'operator', false)).toBe(true);
-        expect(canModify({ account: 'operator' }, 'administrator', true)).toBe(true);
+describe('isAdministrator', () => {
+    it('reads the role stored at login', () => {
+        expect(isAdministrator({ getItem: () => 'true' })).toBe(true);
+        expect(isAdministrator({ getItem: () => 'false' })).toBe(false);
+        expect(isAdministrator({ getItem: () => null })).toBe(false);
     });
-    it('hides changes from other accounts and anonymous sessions', () => {
-        expect(canModify({ account: 'operator' }, 'biali', false)).toBe(false);
-        expect(canModify({ account: 'operator' }, null, false)).toBe(false);
-        expect(canModify({ account: '' }, '', false)).toBe(false);
+});
+
+describe('archive links', () => {
+    it('lists the chosen ids', () => {
+        expect(archiveUrlForIds(['a1', 'b2'])).toBe('/api/taklab/recordings/archive?ids=a1%2Cb2');
+    });
+    it('passes the applied filters with all=1 and no page', () => {
+        expect(archiveUrlForFilters({ kind: '', account: '', from: null, to: null })).toBe('/api/taklab/recordings/archive?all=1');
+        const url = new URL(archiveUrlForFilters({ kind: 'video', account: ' biali ', from: '2026-11-24T10:00:00Z', to: null }), 'http://x');
+        expect(url.pathname).toBe('/api/taklab/recordings/archive');
+        expect(Object.fromEntries(url.searchParams)).toEqual({ all: '1', kind: 'video', account: 'biali', from: '2026-11-24T10:00:00.000Z' });
     });
 });
 

@@ -329,5 +329,11 @@
     "Recording deleted": "Nagranie usunięte",
     "Could not delete recording": "Nie udało się usunąć nagrania",
     "Cancel": "Anuluj",
-    "Save name": "Zapisz"
+    "Save name": "Zapisz",
+    "Recordings are available to the administrator only.": "Nagrania są dostępne tylko dla administratora.",
+    "Download selected (ZIP)": "Pobierz zaznaczone (ZIP)",
+    "Download all matching the filters (ZIP)": "Pobierz wszystkie z filtrem (ZIP)",
+    "Selected": "Zaznaczone",
+    "Clear selection": "Wyczyść zaznaczenie",
+    "One archive holds up to 100 selected recordings.": "Jedno archiwum mieści do 100 zaznaczonych nagrań."
 }

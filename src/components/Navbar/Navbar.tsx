@@ -62,8 +62,8 @@ const navbarLinks = [
     { link: '/data_packages', label: t('Data Packages'), icon: IconPackage },
     { link: '/video_streams', label: t('Video Streams'), icon: IconVideo },
     { link: '/video_recordings', label: t('Video Recordings'), icon: IconMovie },
-    // TakLab: recordings registry
-    { link: '/recordings', label: 'Recordings', icon: IconFolders },
+    // TakLab: recordings registry, administrator role only (decision 24 XI 2026)
+    { link: '/recordings', label: 'Recordings', icon: IconFolders, adminOnly: true },
     { link: '/meshtastic', label: t('Meshtastic'), icon: MeshtasticLogo },
     { link: '/missions', label: t('Missions'), icon: IconRefresh },
 ];
@@ -140,7 +140,7 @@ export default function Navbar() {
         }
     }
 
-    const links = navbarLinks.map((item) => (
+    const links = navbarLinks.filter((item) => administrator || !('adminOnly' in item && item.adminOnly)).map((item) => (
         <NavLink
           className={classes.link}
           component={Link}

@@ -329,5 +329,11 @@
     "Recording deleted": "Recording deleted",
     "Could not delete recording": "Could not delete recording",
     "Cancel": "Cancel",
-    "Save name": "Save name"
+    "Save name": "Save name",
+    "Recordings are available to the administrator only.": "Recordings are available to the administrator only.",
+    "Download selected (ZIP)": "Download selected (ZIP)",
+    "Download all matching the filters (ZIP)": "Download all matching the filters (ZIP)",
+    "Selected": "Selected",
+    "Clear selection": "Clear selection",
+    "One archive holds up to 100 selected recordings.": "One archive holds up to 100 selected recordings."
 }

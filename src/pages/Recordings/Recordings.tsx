@@ -3,6 +3,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import {
     ActionIcon,
+    Alert,
     Anchor,
     Badge,
     Button,
@@ -29,6 +30,8 @@ import {
     IconDownload,
     IconExternalLink,
     IconEye,
+    IconFileZip,
+    IconLock,
     IconPencil,
     IconTrash,
     IconX,
@@ -37,10 +40,13 @@ import { DataTable } from 'mantine-datatable';
 import { t } from 'i18next';
 import bytes_formatter from '@/bytes_formatter';
 import {
+    archiveUrlForFilters,
+    archiveUrlForIds,
     deleteRecording,
     getRecording,
     getUsage,
     listRecordings,
+    MAX_ARCHIVE_IDS,
     Recording,
     RecordingDetail,
     RecordingFilters,
@@ -50,11 +56,11 @@ import {
     renameRecording,
 } from './recordingsApi';
 import {
-    canModify,
     cloudtakUrl,
     displayName,
     formatDurationSeconds,
     formatTimestamp,
+    isAdministrator,
     KIND_LABELS,
     usagePercent,
 } from './recordingsUtils';
@@ -131,9 +137,28 @@ export function UsageBar({ usage }: { usage: RecordingUsage }) {
     );
 }
 
+// Shown instead of the page to accounts without the administrator role. It
+// makes no API calls: every recordings route answers 403 for them anyway.
+export function AdminOnlyNotice() {
+    return (
+        <Alert color="yellow" icon={<IconLock />} title={t('Recordings')} data-testid="admin-only">
+            {t('Recordings are available to the administrator only.')}
+        </Alert>
+    );
+}
+
+function isForbidden(err: unknown): boolean {
+    return (err as { response?: { status?: number } })?.response?.status === 403;
+}
+
+// User decision 24 XI 2026: the whole page (list, preview, files, ZIP,
+// rename, delete) is for the OTS administrator role only.
 export default function Recordings() {
-    const administrator = localStorage.getItem('administrator') === 'true';
-    const username = localStorage.getItem('username');
+    if (!isAdministrator()) return <AdminOnlyNotice />;
+    return <RecordingsAdmin />;
+}
+
+function RecordingsAdmin() {
     const mapUrl = cloudtakUrl(window.location.hostname);
 
     const [filters, setFilters] = useState<RecordingFilters>({ kind: '', account: '', from: null, to: null });
@@ -149,6 +174,9 @@ export default function Recordings() {
     const [renaming, setRenaming] = useState<Recording | null>(null);
     const [newName, setNewName] = useState('');
     const [deleting, setDeleting] = useState<Recording | null>(null);
+    const [selected, setSelected] = useState<Recording[]>([]);
+    // The server still says no (role taken away after login): stop asking.
+    const [forbidden, setForbidden] = useState(false);
 
     const load = useCallback(() => {
         setLoading(true);
@@ -158,12 +186,13 @@ export default function Recordings() {
                 setTotal(result.total);
                 setPerPage(result.perPage);
             })
-            .catch((err) => notifyError(t('Could not load recordings'), err))
+            .catch((err) => {
+                if (isForbidden(err)) setForbidden(true);
+                else notifyError(t('Could not load recordings'), err);
+            })
             .finally(() => setLoading(false));
-        if (administrator) {
-            getUsage().then(setUsage).catch((err) => console.log(err));
-        }
-    }, [applied, page, administrator]);
+        getUsage().then(setUsage).catch((err) => console.log(err));
+    }, [applied, page]);
 
     useEffect(() => {
         load();
@@ -205,11 +234,18 @@ export default function Recordings() {
         deleteRecording(deleting.id)
             .then(() => {
                 notifications.show({ message: t('Recording deleted'), color: 'green' });
+                setSelected((current) => current.filter((r) => r.id !== deleting.id));
                 setDeleting(null);
                 load();
             })
             .catch((err) => notifyError(t('Could not delete recording'), err));
     }
+
+    if (forbidden) return <AdminOnlyNotice />;
+
+    const tooMany = selected.length > MAX_ARCHIVE_IDS;
+    const selectedUrl = selected.length > 0 && !tooMany ? archiveUrlForIds(selected.map((r) => r.id)) : undefined;
+    const allUrl = total > 0 ? archiveUrlForFilters(applied) : undefined;
 
     const kindOptions = [
         { value: '', label: t('All kinds') },
@@ -220,7 +256,7 @@ export default function Recordings() {
         <>
             <LoadingOverlay visible={loading} zIndex={1000} overlayProps={{ radius: 'sm', blur: 2, fixed: true }} />
             <Stack>
-                {administrator && usage && <UsageBar usage={usage} />}
+                {usage && <UsageBar usage={usage} />}
 
                 <Paper withBorder p="sm" radius="md">
                     <Group align="flex-end" wrap="wrap">
@@ -267,6 +303,37 @@ export default function Recordings() {
                     </Group>
                 </Paper>
 
+                <Group gap="sm" wrap="wrap" data-testid="archive-bar">
+                    <Button
+                        component="a"
+                        href={selectedUrl}
+                        download
+                        disabled={selectedUrl === undefined}
+                        leftSection={<IconFileZip size={18} />}
+                    >
+                        {t('Download selected (ZIP)')}
+                    </Button>
+                    <Button
+                        component="a"
+                        href={allUrl}
+                        download
+                        variant="light"
+                        disabled={allUrl === undefined}
+                        leftSection={<IconFileZip size={18} />}
+                    >
+                        {t('Download all matching the filters (ZIP)')}
+                    </Button>
+                    {selected.length > 0 && (
+                        <>
+                            <Text size="sm" data-testid="selected-count">{`${t('Selected')}: ${selected.length}`}</Text>
+                            <Button variant="subtle" size="xs" onClick={() => setSelected([])}>{t('Clear selection')}</Button>
+                        </>
+                    )}
+                    {tooMany && (
+                        <Text size="sm" c="red">{t('One archive holds up to 100 selected recordings.')}</Text>
+                    )}
+                </Group>
+
                 <Table.ScrollContainer minWidth="100%">
                     <DataTable
                         withTableBorder
@@ -276,6 +343,8 @@ export default function Recordings() {
                         highlightOnHover
                         idAccessor="id"
                         records={records}
+                        selectedRecords={selected}
+                        onSelectedRecordsChange={setSelected}
                         noRecordsText={t('No recordings')}
                         columns={[
                             {
@@ -300,16 +369,12 @@ export default function Recordings() {
                                         <Tooltip label={t('Download')}>
                                             <ActionIcon variant="subtle" aria-label={t('Download')} component="a" href={recordingFileUrl(r.id)} download><IconDownload size={18} /></ActionIcon>
                                         </Tooltip>
-                                        {canModify(r, username, administrator) && (
-                                            <>
-                                                <Tooltip label={t('Rename')}>
-                                                    <ActionIcon variant="subtle" aria-label={t('Rename')} onClick={() => { setRenaming(r); setNewName(r.name ?? ''); }}><IconPencil size={18} /></ActionIcon>
-                                                </Tooltip>
-                                                <Tooltip label={t('Delete recording')}>
-                                                    <ActionIcon variant="subtle" color="red" aria-label={t('Delete recording')} onClick={() => setDeleting(r)}><IconTrash size={18} /></ActionIcon>
-                                                </Tooltip>
-                                            </>
-                                        )}
+                                        <Tooltip label={t('Rename')}>
+                                            <ActionIcon variant="subtle" aria-label={t('Rename')} onClick={() => { setRenaming(r); setNewName(r.name ?? ''); }}><IconPencil size={18} /></ActionIcon>
+                                        </Tooltip>
+                                        <Tooltip label={t('Delete recording')}>
+                                            <ActionIcon variant="subtle" color="red" aria-label={t('Delete recording')} onClick={() => setDeleting(r)}><IconTrash size={18} /></ActionIcon>
+                                        </Tooltip>
                                     </Group>
                                 ),
                             },

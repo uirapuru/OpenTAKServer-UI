@@ -1,6 +1,12 @@
 // TakLab: pure helpers for the Recordings page.
 import type { Recording, RecordingKind, TrackPoint } from './recordingsApi';
 
+// User decision 24 XI 2026: the whole recordings registry is for the OTS
+// administrator role only. Login stores the role in localStorage.
+export function isAdministrator(storage: Pick<Storage, 'getItem'> = localStorage): boolean {
+    return storage.getItem('administrator') === 'true';
+}
+
 export const KIND_LABELS: Record<RecordingKind, string> = {
     video: 'Video',
     voice: 'Voice message',
@@ -37,14 +43,6 @@ export function cloudtakUrl(hostname: string): string | null {
     const domain = hostname.slice(dot + 1);
     if (!domain.includes('.')) return null;
     return `https://${env}-mapa.${domain}/`;
-}
-
-// Mirrors the server rule from the design: only the author or an
-// administrator renames and deletes. The server enforces it; the UI only hides
-// buttons that would fail.
-export function canModify(recording: Pick<Recording, 'account'>, username: string | null, administrator: boolean): boolean {
-    if (administrator) return true;
-    return username !== null && username !== '' && recording.account === username;
 }
 
 export function displayName(

@@ -23,6 +23,8 @@ const EUDStats = React.lazy(() => import('./pages/EUDStats.tsx').then());
 const Plugin = React.lazy(() => import('./pages/Plugin.tsx').then());
 const ServerPluginManager = React.lazy(() => import('./pages/ServerPluginManager.tsx').then());
 const LinkTAKGovAccount = React.lazy(() => import('./pages/LinkTakGov.tsx').then());
+// TakLab: recordings registry page
+const Recordings = React.lazy(() => import('./pages/Recordings/Recordings.tsx').then());
 const UserProfile = React.lazy(() => import('./pages/UserProfile.tsx').then());
 
 const routes = [
@@ -40,6 +42,7 @@ const routes = [
   { path: '/tfa_setup', name: '2FA Setup', element: TFASetup },
   { path: '/reset', name: 'Password Reset', element: PasswordReset },
   { path: '/jobs', name: 'Scheduled Jobs', element: ScheduledJobs },
+  { path: '/recordings', name: 'Recordings', element: Recordings },
   { path: '/video_recordings', name: 'Video Recordings', element: VideoRecordings },
   { path: '/meshtastic', name: 'Meshtastic', element: Meshtastic },
   { path: '/plugin_updates', name: 'PluginUpdates', element: PluginUpdates },

@@ -66,4 +66,6 @@ export const apiRoutes = {
   takgovIcon: '/api/takgov/icon',
   takgovPlugin: '/api/takgov/plugin',
   language: '/api/language',
+  // TakLab: recordings registry (video, voice messages, OCR scans)
+  taklabRecordings: '/api/taklab/recordings',
 };

@@ -26,7 +26,7 @@ import {
     IconPlugConnected,
     IconPlug,
     IconCircleMinus,
-    IconUsersGroup, IconLink, IconUser
+    IconUsersGroup, IconLink, IconUser, IconFolders
 } from '@tabler/icons-react';
 import {
     NavLink,
@@ -62,6 +62,8 @@ const navbarLinks = [
     { link: '/data_packages', label: t('Data Packages'), icon: IconPackage },
     { link: '/video_streams', label: t('Video Streams'), icon: IconVideo },
     { link: '/video_recordings', label: t('Video Recordings'), icon: IconMovie },
+    // TakLab: recordings registry
+    { link: '/recordings', label: 'Recordings', icon: IconFolders },
     { link: '/meshtastic', label: t('Meshtastic'), icon: MeshtasticLogo },
     { link: '/missions', label: t('Missions'), icon: IconRefresh },
 ];
@@ -145,7 +147,7 @@ export default function Navbar() {
           key={item.label}
           active={location.pathname === item.link}
           to={item.link}
-          label={item.label}
+          label={t(item.label)}
           leftSection={<item.icon className={classes.linkIcon} stroke={1.5} />}
           mt="md"
         />

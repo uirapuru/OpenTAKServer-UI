@@ -5183,15 +5183,15 @@ __metadata:
   languageName: node
   linkType: hard
 
-"dompurify@npm:^3.4.3":
-  version: 3.4.3
-  resolution: "dompurify@npm:3.4.3"
+"dompurify@npm:^3.4.18":
+  version: 3.4.18
+  resolution: "dompurify@npm:3.4.18"
   dependencies:
     "@types/trusted-types": "npm:^2.0.7"
   dependenciesMeta:
     "@types/trusted-types":
       optional: true
-  checksum: 10c0/88b9e1a6d0a990e15fab46f4eb96163ef79f20634705b21c82651ffce1ccc5236e4007397d920234afab86123d49be863f2367bd6aacdf28a401aef4d177e0f9
+  checksum: 10c0/03c96d4e04ce6588014d008c09bb80e97dc1f905acc28d0be0cf14ea6974f788f5706cac409a5b7b7a73831dbce15ac7ca68c6fe08b2e1522254f06ce6647e87
   languageName: node
   linkType: hard
 
@@ -8643,7 +8643,7 @@ __metadata:
     clsx: "npm:^2.1.1"
     date-fns: "npm:^4.1.0"
     dayjs: "npm:^1.11.20"
-    dompurify: "npm:^3.4.3"
+    dompurify: "npm:^3.4.18"
     eslint: "npm:^9.12.0"
     eslint-config-mantine: "npm:^4.0.3"
     eslint-plugin-import: "npm:^2.32.0"

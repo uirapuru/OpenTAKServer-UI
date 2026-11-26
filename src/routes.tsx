@@ -25,6 +25,8 @@ const ServerPluginManager = React.lazy(() => import('./pages/ServerPluginManager
 const LinkTAKGovAccount = React.lazy(() => import('./pages/LinkTakGov.tsx').then());
 // TakLab: recordings registry page
 const Recordings = React.lazy(() => import('./pages/Recordings/Recordings.tsx').then());
+// TakLab: on-demand video analysis page
+const VideoAnalysis = React.lazy(() => import('./pages/VideoAnalysis/VideoAnalysis.tsx').then());
 const UserProfile = React.lazy(() => import('./pages/UserProfile.tsx').then());
 
 const routes = [
@@ -43,6 +45,7 @@ const routes = [
   { path: '/reset', name: 'Password Reset', element: PasswordReset },
   { path: '/jobs', name: 'Scheduled Jobs', element: ScheduledJobs },
   { path: '/recordings', name: 'Recordings', element: Recordings },
+  { path: '/video_analysis', name: 'Video analysis', element: VideoAnalysis },
   { path: '/video_recordings', name: 'Video Recordings', element: VideoRecordings },
   { path: '/meshtastic', name: 'Meshtastic', element: Meshtastic },
   { path: '/plugin_updates', name: 'PluginUpdates', element: PluginUpdates },

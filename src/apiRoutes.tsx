@@ -68,4 +68,6 @@ export const apiRoutes = {
   language: '/api/language',
   // TakLab: recordings registry (video, voice messages, OCR scans)
   taklabRecordings: '/api/taklab/recordings',
+  // TakLab: on-demand video analysis (faces in live streams and recordings)
+  taklabVision: '/api/taklab/vision',
 };

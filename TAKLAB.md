@@ -14,3 +14,8 @@ Gałęzie taklab zaczynają się od `taklab/` i stoją na tagu upstreamu, z któ
 - `taklab-dev/fake-recordings-api.mjs`: atrapa API do pracy lokalnej i zrzutów ekranu, bez serwera. Konto z ciasteczka `fake_user`; tylko `administrator` dostaje dane, reszta 403. Trasa `archive` zwraca mały ZIP z przykładowymi plikami. Żeby wejść na stronę bez logowania, ustaw w `localStorage` `loggedIn=true` i `administrator=true`.
 
 Testy: `node .yarn/releases/yarn-4.12.0.cjs vitest` i `npx tsc --noEmit`. `yarn lint` nie działa już w upstreamie (brak `eslint-config-mantine/tsconfig.json`).
+
+## taklab/vision-analysis
+
+- Strona „Analiza wideo” (`/video_analysis`, `src/pages/VideoAnalysis/`): ręczne uruchamianie analizy twarzy na strumieniu na żywo albo nagraniu, tylko dla roli `administrator` OTS. Lista analiz i otwarta analiza odświeżają się co 4 s.
+- Pozycja w menu (`src/components/Navbar/navbarFilter.ts`, `visibleLinks`) jest widoczna tylko dla administratora i tylko gdy `GET /api/taklab/vision/status` zwraca `{enabled: true}`. Zapytanie o status wysyła wyłącznie administrator; błąd zapytania ukrywa pozycję, nie psuje menu.

@@ -26,7 +26,7 @@ import {
     IconPlugConnected,
     IconPlug,
     IconCircleMinus,
-    IconUsersGroup, IconLink, IconUser, IconFolders
+    IconUsersGroup, IconLink, IconUser, IconFolders, IconFaceId
 } from '@tabler/icons-react';
 import {
     NavLink,
@@ -52,6 +52,8 @@ import { apiRoutes } from '../../apiRoutes';
 import MeshtasticLogo from './MeshtasticLogo';
 import {DateTimePicker} from "@mantine/dates";
 import {t} from "i18next";
+import { visibleLinks } from './navbarFilter';
+import { getVisionStatus } from '../../pages/VideoAnalysis/videoAnalysisApi';
 
 const navbarLinks = [
     { link: '/dashboard', label: t('Dashboard'), icon: IconDashboard },
@@ -64,6 +66,8 @@ const navbarLinks = [
     { link: '/video_recordings', label: t('Video Recordings'), icon: IconMovie },
     // TakLab: recordings registry, administrator role only (decision 24 XI 2026)
     { link: '/recordings', label: 'Recordings', icon: IconFolders, adminOnly: true },
+    // TakLab: analiza wideo na żądanie, administrator i środowisko z włączoną analizą
+    { link: '/video_analysis', label: t('Video analysis'), icon: IconFaceId, adminOnly: true, requiresVision: true },
     { link: '/meshtastic', label: t('Meshtastic'), icon: MeshtasticLogo },
     { link: '/missions', label: t('Missions'), icon: IconRefresh },
 ];
@@ -97,6 +101,7 @@ export default function Navbar() {
     const [showItakQr, setShowItakQr] = useState(false);
     const [itakQrString, setItakQrString] = useState('');
     const [plugins, setPlugins] = useState([]);
+    const [visionEnabled, setVisionEnabled] = useState(false);
     const [pluginNavLinks, setPluginNavLinks] = useState<ReactElement[]>([]);
 
     const [showAtakQr, setShowAtakQr] = useState(false);
@@ -116,6 +121,15 @@ export default function Navbar() {
     useEffect(() => {
         get_plugins();
     }, []);
+
+    useEffect(() => {
+        if (!administrator) return;
+        let cancelled = false;
+        getVisionStatus()
+            .then((enabled) => { if (!cancelled) setVisionEnabled(enabled); })
+            .catch(() => { if (!cancelled) setVisionEnabled(false); });
+        return () => { cancelled = true; };
+    }, [administrator]);
 
     useEffect(() => {
         generatePluginLinks();
@@ -140,7 +154,7 @@ export default function Navbar() {
         }
     }
 
-    const links = navbarLinks.filter((item) => administrator || !('adminOnly' in item && item.adminOnly)).map((item) => (
+    const links = visibleLinks(navbarLinks, { administrator, visionEnabled }).map((item) => (
         <NavLink
           className={classes.link}
           component={Link}

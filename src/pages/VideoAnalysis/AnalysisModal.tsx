@@ -1,5 +1,5 @@
 // TakLab: analysis window - state, progress, stop button and the grid of recognised faces.
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Alert, Badge, Box, Button, Group, Image, Modal, SimpleGrid, Stack, Text, UnstyledButton } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
 import { IconX } from '@tabler/icons-react';
@@ -20,53 +20,53 @@ export function AnalysisModal({ analysisId, onClose }: { analysisId: number | nu
     const [faces, setFaces] = useState<AnalysisFace[]>([]);
     const [selected, setSelected] = useState<AnalysisFace | null>(null);
     const [stopping, setStopping] = useState(false);
-    const cancelled = useRef(false);
+    const runRef = useRef<() => boolean>(() => false);
 
-    const refresh = useCallback(async (): Promise<Analysis | null> => {
-        if (analysisId === null) return null;
-        try {
-            const [a, f] = await Promise.all([getAnalysis(analysisId), getFaces(analysisId)]);
-            if (cancelled.current) return null;
-            setAnalysis(a);
-            setFaces(f);
-            return a;
-        } catch (err) {
-            console.log(err);
-            return null;
-        }
-    }, [analysisId]);
-
-    // Poll while the analysis is active; one last fetch happens on the tick that
-    // sees the final state, then the interval is cleared. Cleanup also clears it.
+    // Each effect run owns its own `isCancelled` closure, so a late fetch from a
+    // previous run (closed window, switched analysis) can neither write state nor
+    // start an interval.
     useEffect(() => {
-        cancelled.current = false;
         setAnalysis(null);
         setFaces([]);
         setSelected(null);
         if (analysisId === null) return undefined;
+        let isCancelled = false;
         let timer: ReturnType<typeof setInterval> | undefined;
         const stop = () => { if (timer !== undefined) { clearInterval(timer); timer = undefined; } };
+        const refresh = async (): Promise<Analysis | null> => {
+            try {
+                const [a, f] = await Promise.all([getAnalysis(analysisId), getFaces(analysisId)]);
+                if (isCancelled) return null;
+                setAnalysis(a);
+                setFaces(f);
+                return a;
+            } catch (err) {
+                console.log(err);
+                return null;
+            }
+        };
+        runRef.current = () => !isCancelled;
         refresh().then((a) => {
-            if (cancelled.current || (a && !isActive(a))) return;
+            if (isCancelled || (a && !isActive(a))) return;
             timer = setInterval(async () => {
                 const next = await refresh();
                 if (next && !isActive(next)) stop();
             }, POLL_MS);
         });
-        return () => { cancelled.current = true; stop(); };
-    }, [analysisId, refresh]);
+        return () => { isCancelled = true; stop(); };
+    }, [analysisId]);
 
     const handleStop = async () => {
         if (analysisId === null) return;
         setStopping(true);
         try {
             const a = await stopAnalysis(analysisId);
-            if (!cancelled.current) setAnalysis(a);
+            if (runRef.current()) setAnalysis(a);
         } catch (err) {
             const e = err as { response?: { data?: { error?: string } }; message?: string };
             notifications.show({ title: t('Error'), message: e?.response?.data?.error ?? e?.message ?? '', color: 'red', icon: <IconX /> });
         } finally {
-            if (!cancelled.current) setStopping(false);
+            if (runRef.current()) setStopping(false);
         }
     };
 

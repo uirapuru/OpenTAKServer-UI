@@ -1,5 +1,6 @@
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, waitFor, userEvent, act } from '@test-utils';
+import { useState } from 'react';
 import i18next from 'i18next';
 import VideoAnalysis from './VideoAnalysis';
 import { AnalysisModal, POLL_MS } from './AnalysisModal';
@@ -143,6 +144,29 @@ describe('AnalysisModal', () => {
         expect(await screen.findByText('Done')).toBeInTheDocument();
         await act(async () => { await vi.advanceTimersByTimeAsync(POLL_MS * 3); });
         expect(count()).toBe(3);
+    });
+
+    it('starts no polling when closed before the first fetch resolves', async () => {
+        vi.useFakeTimers({ shouldAdvanceTime: true });
+        let release: (v: unknown) => void = () => {};
+        const gate = new Promise((r) => { release = r; });
+        get.mockImplementation(async (url: string) => {
+            await gate;
+            return url.endsWith('/faces') ? { data: { items: faces } } : { data: single };
+        });
+        // Close from inside, so the same component instance sees the id change.
+        function Host() {
+            const [id, setId] = useState<number | null>(12);
+            return <><button type="button" onClick={() => setId(null)}>close-it</button><AnalysisModal analysisId={id} onClose={() => {}} /></>;
+        }
+        const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+        render(<Host />);
+        await user.click(screen.getByText('close-it'));
+        release(null);
+        await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+        const before = get.mock.calls.length;
+        await act(async () => { await vi.advanceTimersByTimeAsync(POLL_MS * 3); });
+        expect(get.mock.calls.length).toBe(before);
     });
 
     it('stops polling when unmounted', async () => {
